@@ -1,1 +1,1 @@
-export * from "./ui"
+export { default as DevicesSelector } from "./DevicesSelector";

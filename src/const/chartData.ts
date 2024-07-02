@@ -1,5 +1,4 @@
-export const data = [
-  // Existing data
+export const chartData = [
   {
     Serial_Number: "SN123",
     DateTime: "15:00",
@@ -288,8 +287,6 @@ export const data = [
     Device_ID: "main",
     Wattage: 155,
   },
-
-  // Additional devices and data points
   {
     Serial_Number: "SN131",
     DateTime: "15:00",

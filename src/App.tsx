@@ -1,95 +1,92 @@
+import { SelectOption, chartData, selectAllOption } from "@/const";
 import { useState } from "react";
 import {
-  LineChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { data as chartData } from "@/data";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui";
+import { DevicesSelector } from "./components";
 
-interface DataPoint {
+type DataPoint = {
   Serial_Number: string;
   DateTime: string;
-  Device_ID: string;
   Wattage: number;
-}
+};
 
-interface AggregatedDataPoint {
+type AggregatedDataPoint = {
   DateTime: string;
   Wattage: number;
-}
+};
 
 const App = () => {
-  const [serialNumber, setSerialNumber] = useState("all");
+  const [selectedDevices, setSelectedDevices] = useState<SelectOption[]>([
+    selectAllOption,
+  ]);
 
-  const filterData = (
-    data: DataPoint[]
-  ): DataPoint[] | AggregatedDataPoint[] => {
-    if (serialNumber === "all") {
-      const aggregatedData = data.reduce((acc, d) => {
+  const computeData = (data: DataPoint[]) => {
+    const filteredDevicesData = selectedDevices.reduce((acc, option) => {
+      acc[option.value] = data.filter(
+        (device) => device.Serial_Number === option.value
+      );
+      return acc;
+    }, {} as { [key: string]: DataPoint[] | AggregatedDataPoint[] });
+
+    if (
+      selectedDevices.find((option) => option.value === selectAllOption.value)
+    ) {
+      const allDevicesData = data.reduce((acc, d) => {
         if (acc[d.DateTime]) {
           acc[d.DateTime] += d.Wattage;
         } else {
           acc[d.DateTime] = d.Wattage;
         }
-
         return acc;
       }, {} as { [key: string]: number });
 
-      return Object.keys(aggregatedData).map((dateTime) => ({
+      filteredDevicesData["all"] = Object.keys(allDevicesData).map((dateTime) => ({
         DateTime: dateTime,
-        Wattage: aggregatedData[dateTime],
+        Wattage: allDevicesData[dateTime],
       }));
     }
 
-    return data.filter((d) =>
-      serialNumber ? d.Serial_Number === serialNumber : true
-    );
+    return filteredDevicesData;
   };
 
-  const filteredData = filterData(chartData);
+  const computedData = computeData(chartData);
 
   return (
     <div className="max-w-screen-xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-semibold tracking-tight mb-10 ml-[3.9rem]">
         Smart Home Electrical Consumption
       </h1>
-      <div className="mb-4 ml-[3.9rem]">
-        <Select value={serialNumber} onValueChange={setSerialNumber}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Serial Number" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Serial Numbers</SelectItem>
-            {Array.from(new Set(chartData.map((d) => d.Serial_Number))).map(
-              (sn) => (
-                <SelectItem key={sn} value={sn}>
-                  {sn}
-                </SelectItem>
-              )
-            )}
-          </SelectContent>
-        </Select>
+      <div className="mb-4 ml-[3.9rem] max-w-[20rem]">
+        <DevicesSelector
+          value={selectedDevices}
+          onChange={setSelectedDevices}
+        />
       </div>
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={filteredData}>
+        <LineChart data={Array.isArray(computedData) ? computedData : []}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="DateTime" />
+          <XAxis dataKey="DateTime" allowDuplicatedCategory={false} />
           <YAxis />
           <Tooltip />
           <Legend />
-          <Line type="monotone" dataKey="Wattage" stroke="#8884d8" />
+          {Object.keys(computedData).map((key) => (
+            <Line
+              key={key}
+              type="monotone"
+              data={computedData[key]}
+              dataKey="Wattage"
+              name={key}
+              stroke="#8884d8"
+            />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
